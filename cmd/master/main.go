@@ -27,25 +27,51 @@ func usage(programName string) {
 	fmt.Println("1. --run <msg>")
 }
 
-func masterRun(msg string) bool {
+func runLLM(msg string) (response string, success bool) {
 	ollamaReq := OllamaRequest{
 		Model:  "llama2",
 		Prompt: msg,
 		Stream: false,
 	}
 
-	data, _ := json.Marshal(ollamaReq)
+	data, err := json.Marshal(ollamaReq)
+	if err != nil {
+		fmt.Println("Error marshalling ollama request: " + err.Error())
+		return "", false
+	}
+
 	resp, err := http.Post("http://localhost:11434/api/generate", "application/json", bytes.NewReader(data))
 	if err != nil {
-		panic("Error posting to ollama: " + err.Error())
+		fmt.Println("Error posting to ollama: " + err.Error())
+		return "", false
 	}
 	defer resp.Body.Close()
 
 	var ollamaResp OllamaResponse
-	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &ollamaResp)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading ollama response: " + err.Error())
+		return "", false
+	}
 
-	fmt.Println("Response from ollama: " + ollamaResp.Response)
+	err = json.Unmarshal(body, &ollamaResp)
+	if err != nil {
+		fmt.Println("Error unmarshalling ollama response: " + err.Error())
+		return "", false
+	}
+
+	return ollamaResp.Response, true
+}
+
+func masterRun(msg string) bool {
+
+	response, success := runLLM(msg)
+	if !success {
+		fmt.Println("Error getting response from the LLM")
+		return false
+	}
+
+	fmt.Println("Response from ollama: " + response)
 	return true
 }
 
