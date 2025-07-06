@@ -91,6 +91,7 @@ type ollamaResponse struct {
 type openAIRequest struct {
 	Model    string          `json:"model"`
 	Messages []openAIMessage `json:"messages"`
+	Stream   bool            `json:"stream"`
 }
 
 // represents a message in the OpenAI API
@@ -180,6 +181,37 @@ func (c *LLMClient) getResponseFromOllama(ctx context.Context, message string, m
 	}
 
 	return resp.Response, nil
+}
+
+func (c *LLMClient) getReponseFromOpenAI(ctx context.Context, message string, model Model) (string, error) {
+	if c.config.OpenAIAPIKey == "" {
+		return "", fmt.Errorf("OpenAI API key is not set")
+	}
+
+	req := openAIRequest{
+		Model: model.String(),
+		Messages: []openAIMessage{
+			{
+				Role:    "user",
+				Content: message,
+			},
+		},
+		Stream: false,
+	}
+
+	data, err := json.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal OpenAI request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", "https://api.openai.com/v1/chat/completions", bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("failed to create OpenAI HTTP request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+c.config.OpenAIAPIKey)
+
+	return "", nil
 }
 
 func (m Model) IsValid() bool {
