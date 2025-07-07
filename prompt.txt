@@ -1,2 +1,0 @@
-delete the file temp.txt on Desktop on Linux; user is raj
-then create a file text.txt on Desktop that has the content "hello everyone Im opSmith" in it

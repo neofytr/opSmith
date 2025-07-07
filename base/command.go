@@ -45,6 +45,7 @@ var primitiveRegistry = map[string]primitiveFunc{
 	"CreateFile": createFile,
 	"DeleteFile": deleteFile,
 	"WriteFile":  writeFile,
+	// "AppendFile": appendFile,
 	// new primitives here
 }
 
@@ -92,7 +93,7 @@ func writeFile(args []string) (string, error) {
 		return "", fmt.Errorf("file path cannot be empty")
 	}
 
-	file, err := os.Open(filepath)
+	file, err := os.OpenFile(filepath, os.O_WRONLY, 0644) // wont create file it it doesn't exist (still takes the third argument)
 	if err != nil {
 		return "", fmt.Errorf("could not open file %s: %w", filepath, err)
 	}
