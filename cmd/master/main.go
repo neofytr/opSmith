@@ -17,9 +17,16 @@ Your job is to understand the user's natural language input and convert it into 
 
 The client supports the following commands:
 
-1. ReadFile <file_path> - Opens a file and reads its entire contents, then closes it
+1. ReadFile <file_path> - Opens a file and reads its entire contents, then closes it.
 
-Return exactly **one command** as your final response, with **no explanation or commentary**.
+Respond with a single **JSON object only**, following this structure:
+
+{
+  "name": "<CommandName>",
+  "args": ["<arg1>", "<arg2>", ...]
+}
+
+Do not include any extra text, markdown, or explanation — just return the pure JSON object.
 
 Begin below:
 `
@@ -48,6 +55,7 @@ func masterRun(msg, clientIP, clientPort string) error {
 		cancel() // cancel the context to stop the client
 	}()
 
+	// this is a json response consisting of the command(s)
 	response, err := client.GetResponse(ctx, genMsg+"\n"+msg)
 	if err != nil {
 		return fmt.Errorf("couldn't get AI response: %s", err)

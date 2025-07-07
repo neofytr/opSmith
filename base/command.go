@@ -6,6 +6,9 @@ import (
 	"os"
 )
 
+const StatusOK int = 0
+const StatusError int = -1
+
 /*
 
 Primitives
@@ -18,6 +21,12 @@ Contains only a single argument - the file path
 type Primitive struct {
 	Name string   `json:"name"`
 	Args []string `json:"args"`
+}
+
+type Response struct {
+	Data   string `json:"data"`
+	Err    error  `json:"err,omitempty"`
+	Status int    `json:"status,omitempty"`
 }
 
 func runReadFile(filepath string) (string, error) {
@@ -39,22 +48,28 @@ func runReadFile(filepath string) (string, error) {
 	return string(data), nil
 }
 
-func (p *Primitive) Run() (string, error) {
+func (p *Primitive) Run() Response {
 	if p.Name == "" {
-		return "", fmt.Errorf("primitive name cannot be empty")
+		return Response{"", fmt.Errorf("primitive name cannot be empty"), StatusError}
 	}
 
 	switch p.Name {
 	case "ReadFile":
 		{
 			if len(p.Args) != 1 {
-				return "", fmt.Errorf("primitive %s requires exactly one argument", p.Name)
+				return Response{"", fmt.Errorf("primitive %s requires exactly one argument", p.Name), StatusError}
 			}
-			return runReadFile(p.Args[0])
+
+			data, err := runReadFile(p.Args[0])
+			if err != nil {
+				return Response{"", fmt.Errorf("error running primitive %s -> %w", p.Name, err), StatusError}
+			}
+
+			return Response{data, nil, StatusOK}
 		}
 	default:
 		{
-			return "", fmt.Errorf("primitive %s is not implemented", p.Name)
+			return Response{"", fmt.Errorf("primitive %s is not implemented", p.Name), StatusError}
 		}
 	}
 }
