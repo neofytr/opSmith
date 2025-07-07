@@ -13,10 +13,10 @@ import (
 type Model int
 
 const (
-	Llama2 Model = iota + 1
-	GPT4o
-	GPT35Turbo
-	Llama3
+	Llama2     Model = 1
+	GPT4o      Model = 2
+	GPT35Turbo Model = 3
+	Llama3     Model = 4
 )
 
 const (

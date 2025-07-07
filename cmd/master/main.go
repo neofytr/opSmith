@@ -22,6 +22,9 @@ const aiPrompt = `You are a command-generating assistant that converts natural l
 
 Available commands:
 1. ReadFile <file_path> - reads entire file contents
+2. WriteFile <file_path> <content> - writes content to file (doesn't create the file if it doesn't exist)
+3. CreateFile <file_path> - creates a new file (truncates it if it exists); can't write content using CreateFile
+4. DeleteFile <file_path> - deletes the specified file
 
 Respond with:
 {
@@ -118,7 +121,7 @@ func parseArgs(args []string) (*config, string, error) {
 // generateCommands uses AI to convert natural language to commands
 func generateCommands(ctx context.Context, message string) (string, error) {
 	// create llm client
-	config := basepkg.CreateConfig(basepkg.Llama2, "", "", 120*time.Second)
+	config := basepkg.CreateConfig(basepkg.Llama3, "", "", 1200*time.Second)
 	client := basepkg.NewLLMClient(config)
 
 	// get ai response
@@ -255,6 +258,7 @@ func showUsage(programName string) {
 	fmt.Println("  --client <IP> <port>  specify slave IP and port")
 	fmt.Println("  --run <command>       natural language command to execute")
 	fmt.Println("  --timeout <duration>  connection timeout (default: 30s)")
+	fmt.Println(" --run-from-file <file_path>  read command from file")
 	fmt.Println("examples:")
 	fmt.Printf("  %s --client 192.168.1.100 8080 --run \"read file config.txt\"\n", programName)
 	fmt.Printf("  %s --client localhost 8080 --run \"read files a.txt and b.txt\" --timeout 60s\n", programName)

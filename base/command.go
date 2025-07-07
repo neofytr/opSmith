@@ -41,8 +41,44 @@ type primitiveFunc func(args []string) (string, error)
 
 // primitiveRegistry holds all available primitives
 var primitiveRegistry = map[string]primitiveFunc{
-	"ReadFile": readFile,
+	"ReadFile":   readFile,
+	"CreateFile": createFile,
+	"DeleteFile": deleteFile,
+	"WriteFile":  writeFile,
 	// new primitives here
+}
+
+func deleteFile(args []string) (string, error) {
+	if len(args) != 1 {
+		return "", fmt.Errorf("DeleteFile requires exactly one argument (file path)")
+	}
+
+	filepath := args[0]
+	if filepath == "" {
+		return "", fmt.Errorf("file path cannot be empty")
+	}
+
+	err := os.Remove(filepath)
+	if err != nil {
+		return "", fmt.Errorf("could not delete file %s: %w", filepath, err)
+	}
+
+	return fmt.Sprintf("File %s deleted successfully", filepath), nil
+}
+
+func createFile(args []string) (string, error) {
+	if len(args) != 1 {
+		return "", fmt.Errorf("CreateFile requires exactly one argument(file path)")
+	}
+
+	filepath := args[0]
+	file, err := os.Create(filepath)
+	if err != nil {
+		return "", fmt.Errorf("could not create file %s: %w", filepath, err)
+	}
+
+	file.Close()
+	return fmt.Sprintf("File %s created successfully", filepath), nil
 }
 
 func writeFile(args []string) (string, error) {
