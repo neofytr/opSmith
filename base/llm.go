@@ -181,7 +181,7 @@ func (c *LLMClient) getResponseFromOllama(ctx context.Context, message string, m
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.config.OllamaURL+"/api/generate", bytes.NewReader(data))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.config.OllamaURL, bytes.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("failed to create HTTP request: %w", err)
 	}
@@ -211,6 +211,7 @@ func (c *LLMClient) getResponseFromOllama(ctx context.Context, message string, m
 		return "", fmt.Errorf("ollama API error: %s", resp.Error)
 	}
 
+	fmt.Println(resp.Response)
 	return resp.Response, nil
 }
 
