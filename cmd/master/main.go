@@ -12,18 +12,12 @@ func usage(programName string) {
 	fmt.Println(programName + " <command> <args>")
 	fmt.Println("Available Commands and their arguments:")
 	fmt.Println("1. --run <msg>")
+	fmt.Println("2. --chat")
 }
 
 func masterRun(msg string) bool {
-
-	response, success := basepkg.GetResponseFromLLM(msg)
-	if !success {
-		fmt.Println("Error getting response from the LLM")
-		return false
-	}
-
-	fmt.Println("Response from ollama: " + response)
-	return true
+	config = 
+	client := basepkg.NewLLMClient()
 }
 
 func main() {

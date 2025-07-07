@@ -55,6 +55,36 @@ func DefaultConfig() *Config {
 	}
 }
 
+func (c *LLMClient) SetOpenAIKey(apiKey string) {
+	c.config.OpenAIAPIKey = apiKey
+}
+
+func (c *LLMClient) SetTimeout(timeout time.Duration) {
+	c.config.Timeout = timeout
+}
+
+func (c *LLMClient) SetModel(model Model) error {
+	if !model.IsValid() {
+		return fmt.Errorf("invalid model: %s", model.String())
+	}
+	c.config.DefaultModel = model
+	return nil
+}
+
+// creates a new configuration for the LLM client
+// ollamaURL is the URL for the Ollama API, if not set it defaults to _ollamaURL
+func (c *LLMClient) CreateConfig(defaultModel Model, ollamaURL, openAIAPIKey string, timeout time.Duration) *Config {
+	if ollamaURL == "" {
+		ollamaURL = _ollamaURL
+	}
+	return &Config{
+		DefaultModel: defaultModel,
+		OllamaURL:    ollamaURL,
+		OpenAIAPIKey: openAIAPIKey,
+		Timeout:      timeout,
+	}
+}
+
 // represents an LLM client
 type LLMClient struct {
 	config     *Config
@@ -183,7 +213,7 @@ func (c *LLMClient) getResponseFromOllama(ctx context.Context, message string, m
 	return resp.Response, nil
 }
 
-func (c *LLMClient) getReponseFromOpenAI(ctx context.Context, message string, model Model) (string, error) {
+func (c *LLMClient) getResponseFromOpenAI(ctx context.Context, message string, model Model) (string, error) {
 	if c.config.OpenAIAPIKey == "" {
 		return "", fmt.Errorf("OpenAI API key is not set")
 	}
@@ -211,7 +241,45 @@ func (c *LLMClient) getReponseFromOpenAI(ctx context.Context, message string, mo
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+c.config.OpenAIAPIKey)
 
-	return "", nil
+	httpResp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("OpenAI HTTP request failed: %w", err)
+	}
+	defer httpResp.Body.Close()
+
+	body, err := io.ReadAll((httpResp.Body))
+	if err != nil {
+		return "", fmt.Errorf("failed to read OpenAI response: %w", err)
+	}
+
+	var resp openAIResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return "", fmt.Errorf("failed to unmarshal OpenAI response: %w", err)
+	}
+
+	if resp.Error != nil {
+		return "", fmt.Errorf("OpenAI API error: %s", resp.Error.Message)
+	}
+
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("OpenAI response contains no choices")
+	}
+
+	return resp.Choices[0].Message.Content, nil
+}
+
+// sets the default model for the client
+func (c *LLMClient) SetDefaultModel(model Model) error {
+	if !model.IsValid() {
+		return fmt.Errorf("invalid model: %s", model.String())
+	}
+
+	c.config.DefaultModel = model
+	return nil
+}
+
+func (c *LLMClient) GetDefaultModel() Model {
+	return c.config.DefaultModel
 }
 
 func (m Model) IsValid() bool {
