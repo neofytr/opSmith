@@ -211,7 +211,6 @@ func (c *LLMClient) getResponseFromOllama(ctx context.Context, message string, m
 		return "", fmt.Errorf("ollama API error: %s", resp.Error)
 	}
 
-	fmt.Println(resp.Response)
 	return resp.Response, nil
 }
 

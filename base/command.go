@@ -6,30 +6,52 @@ import (
 	"os"
 )
 
-const StatusOK int = 0
-const StatusError int = -1
+// status constants for command execution
+const (
+	StatusOK    = 0
+	StatusError = -1
+)
 
-/*
-
-Primitives
-
-1. ReadFile - Opens a file and reads it's entire contents
-Contains only a single argument - the file path
-
-*/
-
-type Primitive struct {
+// command represents a single executable command
+type Command struct {
 	Name string   `json:"name"`
 	Args []string `json:"args"`
 }
 
+// response represents the result of command execution
 type Response struct {
 	Data   string `json:"data"`
-	Err    error  `json:"err,omitempty"`
-	Status int    `json:"status,omitempty"`
+	Error  string `json:"error"`
+	Status int    `json:"status"`
 }
 
-func runReadFile(filepath string) (string, error) {
+// batch represents multiple commands to execute
+type Batch struct {
+	Commands []Command `json:"commands"`
+}
+
+// batchResponse represents results from multiple commands
+type BatchResponse struct {
+	Results []Response `json:"results"`
+	Status  int        `json:"status"`
+}
+
+// primitiveFunc defines the signature for primitive functions
+type primitiveFunc func(args []string) (string, error)
+
+// primitiveRegistry holds all available primitives
+var primitiveRegistry = map[string]primitiveFunc{
+	"ReadFile": readFile,
+	// add new primitives here - just map name to function
+}
+
+// readFile primitive - reads entire file contents
+func readFile(args []string) (string, error) {
+	if len(args) != 1 {
+		return "", fmt.Errorf("readFile requires exactly one argument (file path)")
+	}
+
+	filepath := args[0]
 	if filepath == "" {
 		return "", fmt.Errorf("file path cannot be empty")
 	}
@@ -48,28 +70,49 @@ func runReadFile(filepath string) (string, error) {
 	return string(data), nil
 }
 
-func (p *Primitive) Run() Response {
-	if p.Name == "" {
-		return Response{"", fmt.Errorf("primitive name cannot be empty"), StatusError}
+// registerPrimitive adds a new primitive to the registry
+func RegisterPrimitive(name string, fn primitiveFunc) {
+	primitiveRegistry[name] = fn
+}
+
+// run executes a single command
+func (c *Command) Run() Response {
+	if c.Name == "" {
+		return Response{"", "command name cannot be empty", StatusError}
 	}
 
-	switch p.Name {
-	case "ReadFile":
-		{
-			if len(p.Args) != 1 {
-				return Response{"", fmt.Errorf("primitive %s requires exactly one argument", p.Name), StatusError}
-			}
+	// look up primitive function in registry
+	fn, exists := primitiveRegistry[c.Name]
+	if !exists {
+		return Response{"", fmt.Sprintf("primitive %s is not implemented", c.Name), StatusError}
+	}
 
-			data, err := runReadFile(p.Args[0])
-			if err != nil {
-				return Response{"", fmt.Errorf("error running primitive %s -> %w", p.Name, err), StatusError}
-			}
+	// execute the primitive function
+	data, err := fn(c.Args)
+	if err != nil {
+		return Response{"", fmt.Sprintf("error running primitive %s: %v", c.Name, err), StatusError}
+	}
 
-			return Response{data, nil, StatusOK}
+	return Response{data, "", StatusOK}
+}
+
+// runBatch executes multiple commands in sequence
+func (b *Batch) RunBatch() BatchResponse {
+	results := make([]Response, len(b.Commands))
+	overallStatus := StatusOK
+
+	// execute each command in the batch
+	for i, cmd := range b.Commands {
+		results[i] = cmd.Run()
+
+		// if any command fails, mark overall status as error
+		if results[i].Status != StatusOK {
+			overallStatus = StatusError
 		}
-	default:
-		{
-			return Response{"", fmt.Errorf("primitive %s is not implemented", p.Name), StatusError}
-		}
+	}
+
+	return BatchResponse{
+		Results: results,
+		Status:  overallStatus,
 	}
 }

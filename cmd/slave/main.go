@@ -4,64 +4,80 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 
-	"github.com/neofytr/opSmith/base"
+	basepkg "github.com/neofytr/opSmith/base"
 )
 
-const port string = "6969"
+// handleConnection processes incoming client connections
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
 
-func main() {
-	listener, err := net.Listen("tcp", "localhost:"+port)
+	// read incoming data
+	buf := make([]byte, 4096) // increased buffer size for multiple commands
+	n, err := conn.Read(buf)
 	if err != nil {
-		panic(err)
+		fmt.Printf("error reading from connection: %v\n", err)
+		return
+	}
+
+	data := buf[:n]
+	fmt.Printf("received: %s\n", string(data))
+
+	// try to parse as batch first (multiple commands)
+	var batch basepkg.Batch
+	if err := json.Unmarshal(data, &batch); err == nil && len(batch.Commands) > 0 {
+		// execute batch of commands
+		batchResponse := batch.RunBatch()
+
+		responseData, err := json.Marshal(batchResponse)
+		if err != nil {
+			fmt.Printf("error marshaling batch response: %v\n", err)
+			return
+		}
+
+		conn.Write(responseData)
+		return
+	}
+}
+
+// startServer starts the slave server
+func startServer(port string) error {
+	listener, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		return fmt.Errorf("failed to start server on port %s: %w", port, err)
 	}
 	defer listener.Close()
 
-	fmt.Printf("Slave listening on port %s", port)
+	fmt.Printf("slave server listening on port %s\n", port)
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Failed to accept connection:", err)
+			fmt.Printf("error accepting connection: %v\n", err)
 			continue
 		}
 
+		// handle each connection in a separate goroutine
 		go handleConnection(conn)
 	}
 }
 
-func handleConnection(conn net.Conn) {
-	defer conn.Close()
-
-	fmt.Println("Master connected:", conn.RemoteAddr().String())
-
-	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
-	if err != nil {
-		fmt.Printf("Failed to read from master %s -> %s\n", conn.RemoteAddr().String(), err.Error())
+func main() {
+	args := os.Args
+	if len(args) < 3 || args[1] != "--port" {
+		fmt.Println("usage: slave --port <port_number>")
 		return
 	}
 
-	// master will send just a single command
-	var prim base.Primitive
-	err = json.Unmarshal(buf[:n], &prim)
-	if err != nil {
-		fmt.Printf("Failed to unmarshal primitive from master %s -> %s\n", conn.RemoteAddr().String(), err.Error())
+	port := args[2]
+	if port == "" {
+		fmt.Println("port number cannot be empty")
 		return
 	}
 
-	response := prim.Run()
-	data, err := json.Marshal(&response)
-	if err != nil {
-		fmt.Printf("Failed to marshal response from primitive %s -> %s\n", prim.Name, err.Error())
-		return
+	if err := startServer(port); err != nil {
+		fmt.Printf("server error: %v\n", err)
+		os.Exit(1)
 	}
-
-	_, err = conn.Write(data)
-	if err != nil {
-		fmt.Printf("Failed to write response to master %s -> %s\n", conn.RemoteAddr().String(), err.Error())
-		return
-	}
-
-	fmt.Printf("Response sent to master %s: %s\n", conn.RemoteAddr().String(), response.Data)
 }
