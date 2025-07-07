@@ -1,1 +1,1 @@
-delete the file raj.txt on Desktop on Linux; user is raj
+create a file named test.txt in the home directory of a Linux user; write the string "hello, this is an opSmith test\n" to the file

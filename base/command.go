@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
+	"runtime"
 )
 
 // status constants for command execution
@@ -59,6 +61,13 @@ func deleteFile(args []string) (string, error) {
 		return "", fmt.Errorf("file path cannot be empty")
 	}
 
+	if runtime.GOOS == "linux" {
+		filepath, err := expandPath(filepath)
+		if err != nil {
+			return "", fmt.Errorf("could not expand file path %s: %w", filepath, err)
+		}
+	}
+
 	err := os.Remove(filepath)
 	if err != nil {
 		return "", fmt.Errorf("could not delete file %s: %w", filepath, err)
@@ -67,12 +76,29 @@ func deleteFile(args []string) (string, error) {
 	return fmt.Sprintf("File %s deleted successfully", filepath), nil
 }
 
+func expandPath(path string) (string, error) {
+	if path[:2] == "~/" {
+		usr, err := user.Current()
+		if err != nil {
+			return "", err
+		}
+		filepath := usr.HomeDir + "/" + path[2:] // usr.HomeDir is /home/username
+		return filepath, nil
+	}
+	return path, nil
+}
+
 func createFile(args []string) (string, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("CreateFile requires exactly one argument(file path)")
 	}
 
 	filepath := args[0]
+	filepath, err := expandPath(filepath)
+	if err != nil {
+		return "", fmt.Errorf("could not expand file path %s: %w", filepath, err)
+	}
+
 	file, err := os.Create(filepath)
 	if err != nil {
 		return "", fmt.Errorf("could not create file %s: %w", filepath, err)
@@ -88,6 +114,12 @@ func writeFile(args []string) (string, error) {
 	}
 
 	filepath := args[0]
+	if runtime.GOOS == "linux" {
+		filepath, err := expandPath(filepath)
+		if err != nil {
+			return "", fmt.Errorf("could not expand file path %s: %w", filepath, err)
+		}
+	}
 	content := args[1]
 	if filepath == "" {
 		return "", fmt.Errorf("file path cannot be empty")
@@ -116,6 +148,13 @@ func readFile(args []string) (string, error) {
 	filepath := args[0]
 	if filepath == "" {
 		return "", fmt.Errorf("file path cannot be empty")
+	}
+
+	if runtime.GOOS == "linux" {
+		filepath, err := expandPath(filepath)
+		if err != nil {
+			return "", fmt.Errorf("could not expand file path %s: %w", filepath, err)
+		}
 	}
 
 	file, err := os.Open(filepath)
