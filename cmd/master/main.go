@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"time"
 
 	basepkg "github.com/neofytr/opSmith/base"
 )
@@ -16,8 +19,30 @@ func usage(programName string) {
 }
 
 func masterRun(msg string) bool {
-	config = 
-	client := basepkg.NewLLMClient()
+	config := basepkg.CreateConfig(basepkg.Llama3, "", "", 120*time.Second)
+	client := basepkg.NewLLMClient(config)
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt) // ctrl + C capture
+
+	go func() {
+		<-sigChan
+		fmt.Println("Received interrupt signal, shutting down...")
+		cancel() // cancel the context to stop the client
+	}()
+
+	response, err := client.GetResponse(ctx, msg)
+	if err != nil {
+		fmt.Println("Error getting response:", err)
+		return false
+	}
+
+	fmt.Printf("Response: %s\n", response)
+	return true
 }
 
 func main() {

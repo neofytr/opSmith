@@ -73,7 +73,7 @@ func (c *LLMClient) SetModel(model Model) error {
 
 // creates a new configuration for the LLM client
 // ollamaURL is the URL for the Ollama API, if not set it defaults to _ollamaURL
-func (c *LLMClient) CreateConfig(defaultModel Model, ollamaURL, openAIAPIKey string, timeout time.Duration) *Config {
+func CreateConfig(defaultModel Model, ollamaURL, openAIAPIKey string, timeout time.Duration) *Config {
 	if ollamaURL == "" {
 		ollamaURL = _ollamaURL
 	}
@@ -147,7 +147,8 @@ type openAIError struct {
 	Type    string `json:"type"`
 }
 
-func (c *LLMClient) GetReponse(ctx context.Context, message string, model Model) (string, error) {
+// GetReponseWithModel generates a response using the specified model
+func (c *LLMClient) GetReponseWithModel(ctx context.Context, message string, model Model) (string, error) {
 	if !model.IsValid() {
 		return "", fmt.Errorf("invalid model: %s", model.String())
 	}
@@ -163,8 +164,8 @@ func (c *LLMClient) GetReponse(ctx context.Context, message string, model Model)
 }
 
 // this generates a response using the default model
-func (c *LLMClient) GetResponseWithDefaultModel(ctx context.Context, message string) (string, error) {
-	return c.GetReponse(ctx, message, c.config.DefaultModel)
+func (c *LLMClient) GetResponse(ctx context.Context, message string) (string, error) {
+	return c.GetReponseWithModel(ctx, message, c.config.DefaultModel)
 }
 
 // this handles requests to the Ollama API
