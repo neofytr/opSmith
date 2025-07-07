@@ -61,14 +61,15 @@ func deleteFile(args []string) (string, error) {
 		return "", fmt.Errorf("file path cannot be empty")
 	}
 
+	var err error
 	if runtime.GOOS == "linux" {
-		filepath, err := expandPath(filepath)
+		filepath, err = expandPath(filepath)
 		if err != nil {
 			return "", fmt.Errorf("could not expand file path %s: %w", filepath, err)
 		}
 	}
 
-	err := os.Remove(filepath)
+	err = os.Remove(filepath)
 	if err != nil {
 		return "", fmt.Errorf("could not delete file %s: %w", filepath, err)
 	}
@@ -94,9 +95,12 @@ func createFile(args []string) (string, error) {
 	}
 
 	filepath := args[0]
-	filepath, err := expandPath(filepath)
-	if err != nil {
-		return "", fmt.Errorf("could not expand file path %s: %w", filepath, err)
+	var err error
+	if runtime.GOOS == "linux" {
+		filepath, err = expandPath(filepath)
+		if err != nil {
+			return "", fmt.Errorf("could not expand file path %s: %w", filepath, err)
+		}
 	}
 
 	file, err := os.Create(filepath)
@@ -114,8 +118,9 @@ func writeFile(args []string) (string, error) {
 	}
 
 	filepath := args[0]
+	var err error
 	if runtime.GOOS == "linux" {
-		filepath, err := expandPath(filepath)
+		filepath, err = expandPath(filepath)
 		if err != nil {
 			return "", fmt.Errorf("could not expand file path %s: %w", filepath, err)
 		}
@@ -150,8 +155,9 @@ func readFile(args []string) (string, error) {
 		return "", fmt.Errorf("file path cannot be empty")
 	}
 
+	var err error
 	if runtime.GOOS == "linux" {
-		filepath, err := expandPath(filepath)
+		filepath, err = expandPath(filepath)
 		if err != nil {
 			return "", fmt.Errorf("could not expand file path %s: %w", filepath, err)
 		}

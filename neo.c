@@ -23,7 +23,8 @@ void clean_build_artifacts()
 int main(int argc, char **argv)
 {
     neocmd_t *linux_master, *linux_slave, *windows_master, *windows_slave;
-    bool run = false;
+    bool run_slave = false;
+    bool run_master = false;
     neorebuild("neo.c", argv, &argc);
     clean_build_artifacts();
 
@@ -35,9 +36,14 @@ int main(int argc, char **argv)
             return EXIT_SUCCESS;
         }
 
-        if (!strcmp(argv[i], "run"))
+        if (!strcmp(argv[i], "run-slave"))
         {
-            run = true;
+            run_slave = true;
+        }
+
+        if (!strcmp(argv[i], "run-master"))
+        {
+            run_master = true;
         }
     }
 
@@ -74,13 +80,16 @@ int main(int argc, char **argv)
     neocmd_delete(windows_master);
     neocmd_delete(windows_slave);
 
-    if (run)
+    if (run_slave)
     {
         neocmd_t *run_slave = neocmd_create(BASH);
-        neocmd_append(run_slave, BIN LINUX "slave --port 6969 > slave.tmp &"); // run in background
+        neocmd_append(run_slave, BIN LINUX "slave --port 6969"); // run in background
         neocmd_run_sync(run_slave, NULL, NULL, false);
         neocmd_delete(run_slave);
+    }
 
+    if (run_master)
+    {
         neocmd_t *run_master = neocmd_create(BASH);
         neocmd_append(run_master, BIN LINUX "master --client localhost 6969 --run-from-file prompt.txt");
         neocmd_run_sync(run_master, NULL, NULL, false);
