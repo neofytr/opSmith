@@ -131,7 +131,7 @@ func generateCommands(ctx context.Context, message string) (string, error) {
 }
 
 // sendToSlave sends commands to slave and returns response
-func sendToSlave(cfg *config, commandJSON string) error {
+func sendToSlave(cfg *config, commandJSON string, originalQuestion string) error {
 	// connect to slave
 	conn, err := net.DialTimeout("tcp", cfg.clientIP+":"+cfg.clientPort, cfg.timeout)
 	if err != nil {
@@ -156,25 +156,60 @@ func sendToSlave(cfg *config, commandJSON string) error {
 	if loggingEnabled {
 		log.Default().Printf("received response from slave: %s", string(responseData))
 	}
+
 	// parse as batch response first
 	var batchResp basepkg.BatchResponse
 	if err := json.Unmarshal(responseData, &batchResp); err == nil {
-		// handle batch response
-		if loggingEnabled {
-			log.Default().Printf("Executed %d commands:\n", len(batchResp.Results))
-		}
-
+		// create formatted response for AI
+		var formattedResults []string
 		for i, result := range batchResp.Results {
-			fmt.Printf("Command %d ->\n", i+1)
 			if result.Status == basepkg.StatusOK {
-				if loggingEnabled {
-					fmt.Printf("success\n%s\n", result.Data)
-				}
-				fmt.Printf("Response Data ->\n%s\n\n", result.Data)
+				formattedResults = append(formattedResults, fmt.Sprintf("Command %d: Success\nData: %s", i+1, result.Data))
 			} else {
-				fmt.Printf("failed: %s\n\n", result.Error)
+				formattedResults = append(formattedResults, fmt.Sprintf("Command %d: Failed\nError: %s", i+1, result.Error))
 			}
 		}
+
+		// prepare AI prompt for formatting
+		aiFormattingPrompt := fmt.Sprintf(`You are a helpful assistant that presents command execution results in a friendly, formatted way.
+
+Original user question: "%s"
+
+Command execution results:
+%s
+
+Please provide a friendly, well-formatted response that:
+1. Acknowledges the user's original question
+2. Presents the results in a clear, readable format
+3. Summarizes what was accomplished
+4. Uses a conversational tone
+
+Respond directly without any JSON formatting.`, originalQuestion, strings.Join(formattedResults, "\n\n"))
+
+		// get AI formatting response
+		ctx, cancel := context.WithTimeout(context.Background(), cfg.timeout)
+		defer cancel()
+
+		config := basepkg.CreateConfig(basepkg.Llama2, "", "", 1200*time.Second)
+		client := basepkg.NewLLMClient(config)
+
+		aiResponse, err := client.GetResponse(ctx, aiFormattingPrompt)
+		if err != nil {
+			// fallback to original formatting if AI fails
+			fmt.Printf("=== Results for: %s ===\n\n", originalQuestion)
+			for i, result := range batchResp.Results {
+				fmt.Printf("Command %d ->\n", i+1)
+				if result.Status == basepkg.StatusOK {
+					fmt.Printf("✓ Success\nResponse Data ->\n%s\n\n", result.Data)
+				} else {
+					fmt.Printf("✗ Failed: %s\n\n", result.Error)
+				}
+			}
+		} else {
+			// print AI-formatted response
+			fmt.Printf("%s\n", strings.TrimSpace(aiResponse))
+		}
+
 		return nil
 	}
 
@@ -210,7 +245,7 @@ func runMaster(cfg *config, message string) error {
 		log.Default().Printf("generated commands: %s", commandJSON)
 	}
 	// send commands to slave
-	return sendToSlave(cfg, commandJSON)
+	return sendToSlave(cfg, commandJSON, message)
 }
 
 // showUsage displays usage information

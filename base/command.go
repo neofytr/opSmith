@@ -42,7 +42,32 @@ type primitiveFunc func(args []string) (string, error)
 // primitiveRegistry holds all available primitives
 var primitiveRegistry = map[string]primitiveFunc{
 	"ReadFile": readFile,
-	// add new primitives here - just map name to function
+	// new primitives here
+}
+
+func writeFile(args []string) (string, error) {
+	if len(args) != 2 {
+		return "", fmt.Errorf("writeFile requires exactly two arguments (file path and content)")
+	}
+
+	filepath := args[0]
+	content := args[1]
+	if filepath == "" {
+		return "", fmt.Errorf("file path cannot be empty")
+	}
+
+	file, err := os.Open(filepath)
+	if err != nil {
+		return "", fmt.Errorf("could not open file %s: %w", filepath, err)
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(content)
+	if err != nil {
+		return "", fmt.Errorf("could not write to file %s: %w", filepath, err)
+	}
+
+	return "File written successfully", nil
 }
 
 // readFile primitive - reads entire file contents
