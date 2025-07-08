@@ -123,7 +123,7 @@ func parseArgs(args []string) (*config, string, error) {
 // generateCommands uses AI to convert natural language to commands
 func generateCommands(ctx context.Context, message string) (string, error) {
 	// create llm client
-	config := basepkg.CreateConfig(basepkg.Llama3, "", "", 1200*time.Second)
+	config := basepkg.CreateConfig(basepkg.Codellama, "", "", 1200*time.Second)
 	client := basepkg.NewLLMClient(config)
 
 	// get ai response

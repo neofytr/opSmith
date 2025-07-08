@@ -17,6 +17,7 @@ const (
 	GPT4o      Model = 2
 	GPT35Turbo Model = 3
 	Llama3     Model = 4
+	Codellama  Model = 5
 )
 
 const (
@@ -33,6 +34,8 @@ func (m Model) String() string {
 		return "gpt-3.5-turbo"
 	case Llama3:
 		return "llama3"
+	case Codellama:
+		return "codellama"
 	default:
 		return "unknown"
 	}
@@ -51,7 +54,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		DefaultModel: Llama2,
 		OllamaURL:    _ollamaURL,
-		Timeout:      120 * time.Second,
+		Timeout:      1200 * time.Second,
 	}
 }
 
@@ -154,7 +157,7 @@ func (c *LLMClient) GetReponseWithModel(ctx context.Context, message string, mod
 	}
 
 	switch model {
-	case Llama2, Llama3:
+	case Llama2, Llama3, Codellama:
 		return c.getResponseFromOllama(ctx, message, model)
 	case GPT4o, GPT35Turbo:
 		return c.getResponseFromOpenAI(ctx, message, model)
@@ -284,5 +287,5 @@ func (c *LLMClient) GetDefaultModel() Model {
 }
 
 func (m Model) IsValid() bool {
-	return m >= Llama2 && m <= Llama3
+	return m >= Llama2 && m <= Codellama
 }
