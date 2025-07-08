@@ -47,8 +47,40 @@ var primitiveRegistry = map[string]primitiveFunc{
 	"CreateFile": createFile,
 	"DeleteFile": deleteFile,
 	"WriteFile":  writeFile,
-	// "AppendFile": appendFile,
+	"AppendFile": appendFile,
 	// new primitives here
+}
+
+func appendFile(args []string) (string, error) {
+	if len(args) != 2 {
+		return "", fmt.Errorf("AppendFile requires exactly two arguments, filepath an contents")
+	}
+
+	filepath := args[0]
+	if filepath == "" {
+		return "", fmt.Errorf("file path cannot be empty")
+	}
+
+	var err error
+	if runtime.GOOS == "linux" {
+		filepath, err = expandPath(filepath)
+		if err != nil {
+			return "", fmt.Errorf("could not expand file path %s: %w", filepath, err)
+		}
+	}
+
+	file, err := os.OpenFile(filepath, os.O_APPEND|os.O_WRONLY, 0644) // wont create file it it doesn't exist (still takes the third argument)
+	if err != nil {
+		return "", fmt.Errorf("could not open file %s: %w", filepath, err)
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(args[1])
+	if err != nil {
+		return "", fmt.Errorf("could not append to file %s: %w", filepath, err)
+	}
+
+	return "Appended Successfully", nil
 }
 
 func deleteFile(args []string) (string, error) {
