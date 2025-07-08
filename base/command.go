@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/user"
 	"runtime"
 )
@@ -43,12 +44,36 @@ type primitiveFunc func(args []string) (string, error)
 
 // primitiveRegistry holds all available primitives
 var primitiveRegistry = map[string]primitiveFunc{
-	"ReadFile":   readFile,
-	"CreateFile": createFile,
-	"DeleteFile": deleteFile,
-	"WriteFile":  writeFile,
-	"AppendFile": appendFile,
+	"ReadFile":    readFile,
+	"CreateFile":  createFile,
+	"DeleteFile":  deleteFile,
+	"WriteFile":   writeFile,
+	"AppendFile":  appendFile,
+	"CommandExec": commandExec,
 	// new primitives here
+}
+
+func commandExec(args []string) (string, error) {
+	if len(args) != 1 {
+		return "", fmt.Errorf("Command requires exactly one argument (command to execute)")
+	}
+
+	command := args[0]
+	if command == "" {
+		return "", fmt.Errorf("command cannot be empty")
+	}
+
+	cmd := exec.Command("/bin/bash", "-c", command)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("could not execute command %s: %w", command, err)
+	}
+
+	if len(out) == 0 {
+		return "", fmt.Errorf("command %s returned no output", command)
+	}
+
+	return string(out), nil
 }
 
 func appendFile(args []string) (string, error) {

@@ -1,1 +1,1 @@
-create a file named test.txt in the home directory of a Linux user; write the string "hello, this is an opSmith test\n" to the file
+list the directories in the home folder of a Linux User

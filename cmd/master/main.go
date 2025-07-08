@@ -25,6 +25,8 @@ Available commands:
 2. WriteFile <file_path> <content> - writes content to file (doesn't create the file if it doesn't exist)
 3. CreateFile <file_path> - creates a new file (truncates it if it exists); can't write content using CreateFile
 4. DeleteFile <file_path> - deletes the specified file
+5. AppendFile <file_path> <content> - appends content to the end of the file (creates file if it doesn't exist)
+6. CommandExec <command_to_execute> - executes the bash command <command_to_execute> in the shell
 
 Respond with:
 {
